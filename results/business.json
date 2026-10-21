@@ -1,0 +1,374 @@
+{
+  "meta": {
+    "file": "assistant_query_logs.csv",
+    "rows": 1297,
+    "labeled": 1252,
+    "unlabeled": 45,
+    "days": 7,
+    "start": "2026-09-01 07:06",
+    "end": "2026-09-07 21:56",
+    "timezone": "Asia/Shanghai",
+    "stale_threshold_min": 20,
+    "fail_cost_min": 90,
+    "alert_cost_min": 12
+  },
+  "overall": {
+    "failures": 161,
+    "fail_rate": 0.1286,
+    "unlabeled_share": 0.0347
+  },
+  "lag": {
+    "fresh": {
+      "queries": 925,
+      "failures": 30,
+      "fail_rate": 0.0324
+    },
+    "stale": {
+      "queries": 327,
+      "failures": 131,
+      "fail_rate": 0.4006
+    },
+    "stale_share_of_queries": 0.2612,
+    "stale_share_of_failures": 0.8137,
+    "gap_minutes_without_queries": [
+      19,
+      20,
+      21
+    ],
+    "lag_min": 0.0,
+    "lag_max": 70.0
+  },
+  "confounders": {
+    "median_inference_fresh": 52.0,
+    "median_inference_stale": 59.0,
+    "margin_within_fresh": [
+      {
+        "bin": "<=4",
+        "queries": 159,
+        "fail_rate": 0.0503
+      },
+      {
+        "bin": "5-8",
+        "queries": 134,
+        "fail_rate": 0.0373
+      },
+      {
+        "bin": "9-12",
+        "queries": 112,
+        "fail_rate": 0.0089
+      },
+      {
+        "bin": "13-16",
+        "queries": 99,
+        "fail_rate": 0.0404
+      },
+      {
+        "bin": ">16",
+        "queries": 421,
+        "fail_rate": 0.0285
+      }
+    ],
+    "inference_within_fresh": [
+      {
+        "bin": "<=42",
+        "queries": 269,
+        "fail_rate": 0.0335
+      },
+      {
+        "bin": "43-63",
+        "queries": 479,
+        "fail_rate": 0.0376
+      },
+      {
+        "bin": ">63",
+        "queries": 177,
+        "fail_rate": 0.0169
+      }
+    ],
+    "team": [
+      {
+        "team": "华东机床组",
+        "queries": 231,
+        "stale_share": 0.2251,
+        "fail_rate_fresh": 0.0223,
+        "fail_rate_stale": 0.5,
+        "n_fresh": 179,
+        "n_stale": 52
+      },
+      {
+        "team": "华中产线组",
+        "queries": 266,
+        "stale_share": 0.2857,
+        "fail_rate_fresh": 0.0789,
+        "fail_rate_stale": 0.0921,
+        "n_fresh": 190,
+        "n_stale": 76
+      },
+      {
+        "team": "华北重工组",
+        "queries": 247,
+        "stale_share": 0.251,
+        "fail_rate_fresh": 0.0216,
+        "fail_rate_stale": 0.5161,
+        "n_fresh": 185,
+        "n_stale": 62
+      },
+      {
+        "team": "华南电子组",
+        "queries": 265,
+        "stale_share": 0.2981,
+        "fail_rate_fresh": 0.0108,
+        "fail_rate_stale": 0.519,
+        "n_fresh": 186,
+        "n_stale": 79
+      },
+      {
+        "team": "西南汽车组",
+        "queries": 243,
+        "stale_share": 0.2387,
+        "fail_rate_fresh": 0.027,
+        "fail_rate_stale": 0.431,
+        "n_fresh": 185,
+        "n_stale": 58
+      }
+    ],
+    "category": [
+      {
+        "category": "固件升级回滚",
+        "queries": 124,
+        "stale_share": 0.2742,
+        "fail_rate_fresh": 0.0222,
+        "fail_rate_stale": 0.3235
+      },
+      {
+        "category": "备份容灾策略",
+        "queries": 129,
+        "stale_share": 0.1938,
+        "fail_rate_fresh": 0.0096,
+        "fail_rate_stale": 0.32
+      },
+      {
+        "category": "工控参数映射",
+        "queries": 113,
+        "stale_share": 0.2035,
+        "fail_rate_fresh": 0.0222,
+        "fail_rate_stale": 0.3478
+      },
+      {
+        "category": "总线地址分配",
+        "queries": 110,
+        "stale_share": 0.2727,
+        "fail_rate_fresh": 0.0,
+        "fail_rate_stale": 0.4333
+      },
+      {
+        "category": "报警联动规则",
+        "queries": 113,
+        "stale_share": 0.3009,
+        "fail_rate_fresh": 0.0886,
+        "fail_rate_stale": 0.5294
+      },
+      {
+        "category": "数据采集上报",
+        "queries": 126,
+        "stale_share": 0.254,
+        "fail_rate_fresh": 0.0319,
+        "fail_rate_stale": 0.4375
+      },
+      {
+        "category": "权限安全策略",
+        "queries": 129,
+        "stale_share": 0.2791,
+        "fail_rate_fresh": 0.0215,
+        "fail_rate_stale": 0.3889
+      },
+      {
+        "category": "环境依赖校验",
+        "queries": 127,
+        "stale_share": 0.3228,
+        "fail_rate_fresh": 0.0581,
+        "fail_rate_stale": 0.2927
+      },
+      {
+        "category": "网络拓扑规划",
+        "queries": 150,
+        "stale_share": 0.24,
+        "fail_rate_fresh": 0.0439,
+        "fail_rate_stale": 0.4444
+      },
+      {
+        "category": "通信协议配置",
+        "queries": 131,
+        "stale_share": 0.2748,
+        "fail_rate_fresh": 0.0316,
+        "fail_rate_stale": 0.4722
+      }
+    ]
+  },
+  "strategy": {
+    "thresholds": [
+      {
+        "threshold_min": 10,
+        "alerts": 768,
+        "alert_share": 0.6134,
+        "failures_caught": 146,
+        "failures_total": 161,
+        "recall": 0.9068,
+        "remaining_failures": 15,
+        "cost_minutes": 10566,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 3924
+      },
+      {
+        "threshold_min": 12,
+        "alerts": 679,
+        "alert_share": 0.5423,
+        "failures_caught": 144,
+        "failures_total": 161,
+        "recall": 0.8944,
+        "remaining_failures": 17,
+        "cost_minutes": 9678,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 4812
+      },
+      {
+        "threshold_min": 15,
+        "alerts": 541,
+        "alert_share": 0.4321,
+        "failures_caught": 139,
+        "failures_total": 161,
+        "recall": 0.8634,
+        "remaining_failures": 22,
+        "cost_minutes": 8472,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 6018
+      },
+      {
+        "threshold_min": 18,
+        "alerts": 388,
+        "alert_share": 0.3099,
+        "failures_caught": 132,
+        "failures_total": 161,
+        "recall": 0.8199,
+        "remaining_failures": 29,
+        "cost_minutes": 7266,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 7224
+      },
+      {
+        "threshold_min": 20,
+        "alerts": 327,
+        "alert_share": 0.2612,
+        "failures_caught": 131,
+        "failures_total": 161,
+        "recall": 0.8137,
+        "remaining_failures": 30,
+        "cost_minutes": 6624,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 7866
+      },
+      {
+        "threshold_min": 22,
+        "alerts": 327,
+        "alert_share": 0.2612,
+        "failures_caught": 131,
+        "failures_total": 161,
+        "recall": 0.8137,
+        "remaining_failures": 30,
+        "cost_minutes": 6624,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 7866
+      },
+      {
+        "threshold_min": 25,
+        "alerts": 306,
+        "alert_share": 0.2444,
+        "failures_caught": 121,
+        "failures_total": 161,
+        "recall": 0.7516,
+        "remaining_failures": 40,
+        "cost_minutes": 7272,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 7218
+      },
+      {
+        "threshold_min": 30,
+        "alerts": 274,
+        "alert_share": 0.2188,
+        "failures_caught": 107,
+        "failures_total": 161,
+        "recall": 0.6646,
+        "remaining_failures": 54,
+        "cost_minutes": 8148,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 6342
+      },
+      {
+        "threshold_min": 35,
+        "alerts": 238,
+        "alert_share": 0.1901,
+        "failures_caught": 99,
+        "failures_total": 161,
+        "recall": 0.6149,
+        "remaining_failures": 62,
+        "cost_minutes": 8436,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 6054
+      },
+      {
+        "threshold_min": 40,
+        "alerts": 199,
+        "alert_share": 0.1589,
+        "failures_caught": 84,
+        "failures_total": 161,
+        "recall": 0.5217,
+        "remaining_failures": 77,
+        "cost_minutes": 9318,
+        "baseline_cost_minutes": 14490,
+        "saved_minutes": 5172
+      }
+    ],
+    "best": {
+      "threshold_min": 20,
+      "alerts": 327,
+      "alert_share": 0.2612,
+      "failures_caught": 131,
+      "failures_total": 161,
+      "recall": 0.8137,
+      "remaining_failures": 30,
+      "cost_minutes": 6624,
+      "baseline_cost_minutes": 14490,
+      "saved_minutes": 7866
+    },
+    "recommended": {
+      "threshold_min": 20,
+      "alerts_labeled": 327,
+      "alerts_all_queries": 337,
+      "failures_caught": 131,
+      "failures_total": 161,
+      "per_team_per_day_alerts": 9.6,
+      "sensitivity": {
+        "assume_prevented_100pct": {
+          "cost_minutes": 6624.0,
+          "saved_minutes": 7866.0,
+          "saved_pct": 54.3
+        },
+        "assume_prevented_80pct": {
+          "cost_minutes": 8982.0,
+          "saved_minutes": 5508.0,
+          "saved_pct": 38.0
+        },
+        "assume_prevented_60pct": {
+          "cost_minutes": 11340.0,
+          "saved_minutes": 3150.0,
+          "saved_pct": 21.7
+        }
+      }
+    }
+  },
+  "figures": [
+    "results/figures/fail_by_lag.png",
+    "results/figures/fail_by_team_strata.png",
+    "results/figures/cost_curve.png"
+  ]
+}
