@@ -463,6 +463,218 @@
       }
     }
   },
+  "robustness": {
+    "missingness": {
+      "fresh_pct": 0.0382,
+      "stale_pct": 0.0282
+    },
+    "duplicates": {
+      "fresh": 44,
+      "stale": 18,
+      "fresh_share": 0.0458,
+      "stale_share": 0.0534
+    },
+    "margin_distribution": {
+      "fresh": {
+        "mean": 14.71,
+        "median": 15.0,
+        "p25": 7.0,
+        "p75": 23.0
+      },
+      "stale": {
+        "mean": 14.98,
+        "median": 14.0,
+        "p25": 8.0,
+        "p75": 23.0
+      }
+    },
+    "inference_strata": [
+      {
+        "bin": "<=42",
+        "fresh_n": 259,
+        "fresh_fail_rate": 0.0347,
+        "stale_n": 53,
+        "stale_fail_rate": 0.3962
+      },
+      {
+        "bin": "43-63",
+        "fresh_n": 453,
+        "fresh_fail_rate": 0.0375,
+        "stale_n": 140,
+        "stale_fail_rate": 0.3429
+      },
+      {
+        "bin": ">63",
+        "fresh_n": 169,
+        "fresh_fail_rate": 0.0178,
+        "stale_n": 117,
+        "stale_fail_rate": 0.4615
+      }
+    ],
+    "hour_strata": [
+      {
+        "hour": 7,
+        "fresh_n": 49,
+        "fresh_fail_rate": 0.0408,
+        "stale_n": 16,
+        "stale_fail_rate": 0.25
+      },
+      {
+        "hour": 8,
+        "fresh_n": 63,
+        "fresh_fail_rate": 0.0159,
+        "stale_n": 26,
+        "stale_fail_rate": 0.4615
+      },
+      {
+        "hour": 9,
+        "fresh_n": 57,
+        "fresh_fail_rate": 0.0,
+        "stale_n": 26,
+        "stale_fail_rate": 0.3462
+      },
+      {
+        "hour": 10,
+        "fresh_n": 53,
+        "fresh_fail_rate": 0.0755,
+        "stale_n": 25,
+        "stale_fail_rate": 0.48
+      },
+      {
+        "hour": 11,
+        "fresh_n": 66,
+        "fresh_fail_rate": 0.0455,
+        "stale_n": 25,
+        "stale_fail_rate": 0.4
+      },
+      {
+        "hour": 12,
+        "fresh_n": 73,
+        "fresh_fail_rate": 0.0137,
+        "stale_n": 25,
+        "stale_fail_rate": 0.32
+      },
+      {
+        "hour": 13,
+        "fresh_n": 57,
+        "fresh_fail_rate": 0.0702,
+        "stale_n": 18,
+        "stale_fail_rate": 0.2778
+      },
+      {
+        "hour": 14,
+        "fresh_n": 52,
+        "fresh_fail_rate": 0.0192,
+        "stale_n": 26,
+        "stale_fail_rate": 0.4615
+      },
+      {
+        "hour": 15,
+        "fresh_n": 60,
+        "fresh_fail_rate": 0.05,
+        "stale_n": 23,
+        "stale_fail_rate": 0.4348
+      },
+      {
+        "hour": 16,
+        "fresh_n": 53,
+        "fresh_fail_rate": 0.0566,
+        "stale_n": 18,
+        "stale_fail_rate": 0.5
+      },
+      {
+        "hour": 17,
+        "fresh_n": 56,
+        "fresh_fail_rate": 0.0357,
+        "stale_n": 11,
+        "stale_fail_rate": 0.4545
+      },
+      {
+        "hour": 18,
+        "fresh_n": 67,
+        "fresh_fail_rate": 0.0149,
+        "stale_n": 16,
+        "stale_fail_rate": 0.4375
+      },
+      {
+        "hour": 19,
+        "fresh_n": 60,
+        "fresh_fail_rate": 0.0167,
+        "stale_n": 26,
+        "stale_fail_rate": 0.4231
+      },
+      {
+        "hour": 20,
+        "fresh_n": 54,
+        "fresh_fail_rate": 0.0185,
+        "stale_n": 13,
+        "stale_fail_rate": 0.3077
+      },
+      {
+        "hour": 21,
+        "fresh_n": 61,
+        "fresh_fail_rate": 0.0328,
+        "stale_n": 16,
+        "stale_fail_rate": 0.3125
+      }
+    ],
+    "volume": {
+      "quartiles": [
+        {
+          "volume_bin": "(0.999, 2.0]",
+          "queries": 392,
+          "mean_volume": 1.68,
+          "fail_rate": 0.1403,
+          "stale_share": 0.2398
+        },
+        {
+          "volume_bin": "(2.0, 3.0]",
+          "queries": 308,
+          "mean_volume": 3.0,
+          "fail_rate": 0.1169,
+          "stale_share": 0.2727
+        },
+        {
+          "volume_bin": "(3.0, 4.0]",
+          "queries": 207,
+          "mean_volume": 4.0,
+          "fail_rate": 0.1353,
+          "stale_share": 0.2657
+        },
+        {
+          "volume_bin": "(4.0, 8.0]",
+          "queries": 284,
+          "mean_volume": 5.68,
+          "fail_rate": 0.1162,
+          "stale_share": 0.2711
+        }
+      ],
+      "corr_volume_fail": -0.0278,
+      "corr_volume_lag": 0.01
+    },
+    "standardization": {
+      "by_team": {
+        "strata": 5,
+        "stale_rate_standardized_to_fresh": 0.4099,
+        "fresh_rate_standardized_to_stale": 0.0343
+      },
+      "by_category": {
+        "strata": 10,
+        "stale_rate_standardized_to_fresh": 0.3931,
+        "fresh_rate_standardized_to_stale": 0.0348
+      }
+    },
+    "logistic": {
+      "model": "fail ~ stale + match_margin + inference_ms + team + category + local_hour",
+      "n": 1191,
+      "parameters": 31,
+      "stale_odds_ratio": 20.96,
+      "stale_ci95": [
+        13.21,
+        33.25
+      ]
+    }
+  },
   "figures": [
     "results/figures/fail_by_lag.png",
     "results/figures/fail_by_team_strata.png",

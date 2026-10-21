@@ -17,6 +17,7 @@ import argparse
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from analysis.io_utils import read_table
@@ -43,10 +44,13 @@ def prepare(path: Path) -> tuple[pd.DataFrame, dict]:
     df["lag_min"] = (df["query_time"] - df["kb_synced_at"]).dt.total_seconds() / 60
     df["stale"] = df["lag_min"] >= STALE_MIN
     df["fail"] = df["is_success"].map({1.0: False, 0.0: True})
+    df["local_hour"] = df["query_time"].dt.tz_convert("Asia/Shanghai").dt.hour
+    df["local_date"] = df["query_time"].dt.tz_convert("Asia/Shanghai").dt.date
 
     # query_id 是任务书定义的单据唯一流水号；重复行必须先声明再剔除
     raw_rows = int(len(df))
-    duplicate_rows = int(df.duplicated(subset=["query_id"], keep="first").sum())
+    dup_mask = df.duplicated(subset=["query_id"], keep="first")
+    duplicate_rows = int(dup_mask.sum())
     before_labeled = df[df["is_success"].notna()]
     before_fail = int((before_labeled["is_success"] == 0).sum())
     before_stale_fail = int(((before_labeled["is_success"] == 0) & before_labeled["stale"]).sum())
@@ -56,6 +60,14 @@ def prepare(path: Path) -> tuple[pd.DataFrame, dict]:
         "failures": before_fail,
         "fail_rate": round(before_fail / len(before_labeled), 4) if len(before_labeled) else None,
         "stale_share_of_failures": round(before_stale_fail / before_fail, 4) if before_fail else None,
+    }
+    fresh_rows = int((~df["stale"]).sum())
+    stale_rows = int(df["stale"].sum())
+    meta["duplicates_by_stale"] = {
+        "fresh": int((dup_mask & ~df["stale"]).sum()),
+        "stale": int((dup_mask & df["stale"]).sum()),
+        "fresh_share": round(int((dup_mask & ~df["stale"]).sum()) / fresh_rows, 4) if fresh_rows else None,
+        "stale_share": round(int((dup_mask & df["stale"]).sum()) / stale_rows, 4) if stale_rows else None,
     }
     df = df.drop_duplicates(subset=["query_id"], keep="first").copy()
     meta["raw_rows"] = raw_rows
@@ -130,6 +142,130 @@ def strategy_sensitivity(all_df: pd.DataFrame, threshold: int) -> dict:
             1,
         ),
         "sensitivity": out,
+    }
+
+
+def _standardize(labeled: pd.DataFrame, key: str) -> dict:
+    """直接标准化：消除团队/类别构成差异后，过期与新鲜的故障率。"""
+    table = labeled.groupby([key, "stale"])["fail"].mean().unstack()
+    both = table.dropna()
+    w_fresh = labeled[~labeled["stale"]].groupby(key).size().reindex(both.index)
+    w_stale = labeled[labeled["stale"]].groupby(key).size().reindex(both.index)
+    return {
+        "strata": int(len(both)),
+        "stale_rate_standardized_to_fresh": round(float((both[True] * w_fresh / w_fresh.sum()).sum()), 4),
+        "fresh_rate_standardized_to_stale": round(float((both[False] * w_stale / w_stale.sum()).sum()), 4),
+    }
+
+
+def _logistic_stale_or(labeled: pd.DataFrame) -> dict:
+    """逻辑回归：故障 ~ 过期 + margin + 推理 + 团队 + 类别 + 小时。"""
+    cols = labeled[["stale", "match_margin", "inference_ms", "team", "category", "local_hour"]].copy()
+    X = pd.get_dummies(cols, columns=["team", "category", "local_hour"], drop_first=True, dtype=float)
+    X.insert(0, "const", 1.0)
+    names = list(X.columns)
+    Xv = X.to_numpy(dtype=float)
+    y = labeled["fail"].astype(float).to_numpy()
+    beta = np.zeros(Xv.shape[1])
+    penalty = 1e-3 * np.eye(Xv.shape[1])
+    for _ in range(200):
+        eta = np.clip(Xv @ beta, -30, 30)
+        p = 1 / (1 + np.exp(-eta))
+        w = np.clip(p * (1 - p), 1e-8, None)
+        hessian = Xv.T @ (Xv * w[:, None]) + penalty
+        gradient = Xv.T @ (y - p)
+        step = np.linalg.solve(hessian, gradient)
+        beta += step
+        if np.max(np.abs(step)) < 1e-9:
+            break
+    eta = np.clip(Xv @ beta, -30, 30)
+    p = 1 / (1 + np.exp(-eta))
+    w = np.clip(p * (1 - p), 1e-8, None)
+    hessian = Xv.T @ (Xv * w[:, None]) + penalty
+    se = np.sqrt(np.diag(np.linalg.inv(hessian)))
+    i = names.index("stale")
+    return {
+        "model": "fail ~ stale + match_margin + inference_ms + team + category + local_hour",
+        "n": int(len(y)),
+        "parameters": int(Xv.shape[1]),
+        "stale_odds_ratio": round(float(np.exp(beta[i])), 2),
+        "stale_ci95": [
+            round(float(np.exp(beta[i] - 1.96 * se[i])), 2),
+            round(float(np.exp(beta[i] + 1.96 * se[i])), 2),
+        ],
+    }
+
+
+def build_robustness(df: pd.DataFrame, labeled: pd.DataFrame, meta: dict) -> dict:
+    missing = {
+        "fresh_pct": round(float(df.loc[~df["stale"], "is_success"].isna().mean()), 4),
+        "stale_pct": round(float(df.loc[df["stale"], "is_success"].isna().mean()), 4),
+    }
+
+    margin = {}
+    for s, name in ((False, "fresh"), (True, "stale")):
+        part = labeled.loc[labeled["stale"] == s, "match_margin"]
+        margin[name] = {
+            "mean": round(float(part.mean()), 2),
+            "median": round(float(part.median()), 2),
+            "p25": round(float(part.quantile(0.25)), 2),
+            "p75": round(float(part.quantile(0.75)), 2),
+        }
+
+    lab = labeled.copy()
+    lab["ibin"] = pd.cut(lab["inference_ms"], [-1, 42, 63, 200], labels=["<=42", "43-63", ">63"])
+    inference = []
+    for b in ["<=42", "43-63", ">63"]:
+        row = {"bin": b}
+        for s, name in ((False, "fresh"), (True, "stale")):
+            part = lab[(lab["ibin"] == b) & (lab["stale"] == s)]
+            row[f"{name}_n"] = int(len(part))
+            row[f"{name}_fail_rate"] = round(float(part["fail"].mean()), 4) if len(part) else None
+        inference.append(row)
+
+    hours = []
+    for hour, frame in lab.groupby("local_hour"):
+        fresh, stale = frame[~frame["stale"]], frame[frame["stale"]]
+        hours.append({
+            "hour": int(hour),
+            "fresh_n": int(len(fresh)),
+            "fresh_fail_rate": round(float(fresh["fail"].mean()), 4) if len(fresh) else None,
+            "stale_n": int(len(stale)),
+            "stale_fail_rate": round(float(stale["fail"].mean()), 4) if len(stale) else None,
+        })
+
+    volume = (
+        df.groupby(["team", "local_date", "local_hour"]).size().rename("volume").reset_index()
+    )
+    lab = lab.merge(volume, on=["team", "local_date", "local_hour"], how="left")
+    lab["volume_bin"] = pd.qcut(lab["volume"], 4, duplicates="drop")
+    volume_rows = [
+        {
+            "volume_bin": str(k),
+            "queries": int(len(part)),
+            "mean_volume": round(float(part["volume"].mean()), 2),
+            "fail_rate": round(float(part["fail"].mean()), 4),
+            "stale_share": round(float(part["stale"].mean()), 4),
+        }
+        for k, part in lab.groupby("volume_bin", observed=True)
+    ]
+
+    return {
+        "missingness": missing,
+        "duplicates": meta.get("duplicates_by_stale"),
+        "margin_distribution": margin,
+        "inference_strata": inference,
+        "hour_strata": hours,
+        "volume": {
+            "quartiles": volume_rows,
+            "corr_volume_fail": round(float(lab["volume"].corr(lab["fail"])), 4),
+            "corr_volume_lag": round(float(lab["volume"].corr(lab["lag_min"])), 4),
+        },
+        "standardization": {
+            "by_team": _standardize(labeled, "team"),
+            "by_category": _standardize(labeled, "category"),
+        },
+        "logistic": _logistic_stale_or(labeled),
     }
 
 
@@ -255,6 +391,7 @@ def build_results(df: pd.DataFrame, meta: dict) -> dict:
             "best": best,
             "recommended": strategy_sensitivity(df, STALE_MIN),
         },
+        "robustness": build_robustness(df, labeled, meta),
     }
 
 
