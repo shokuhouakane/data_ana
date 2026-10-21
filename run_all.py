@@ -120,11 +120,20 @@ def main(argv: list[str] | None = None) -> int:
         for block in summaries.values()
         if block.get("group_sum_all_amount") is not None and default_amount is not None
     ]
+    dup_impact = quality.get("duplicates", {}).get("order_id_duplicate_amount_impact")
+    default_excluded = policy["default_totals"]["excluded_amount"] if policy["default_totals"] else None
     results["reconciliation"] = {
         "groups_checked": len(group_checks),
         "all_group_sums_match_overall": all(group_checks) if group_checks else None,
         "groups_compared_to_default_totals": len(matches_default),
         "all_group_sums_match_default_totals": all(matches_default) if matches_default else None,
+        # 默认整行去重与“订单号重复”是两个不同口径；把差亮出来，避免看起来矛盾
+        "default_excluded_amount": default_excluded,
+        "order_id_duplicate_amount_impact": dup_impact,
+        "default_excluded_matches_order_id_duplicates": (
+            None if default_excluded is None or dup_impact is None
+            else abs(default_excluded - dup_impact) < 0.01
+        ),
     }
 
     json_path = write_json(results, out_dir)

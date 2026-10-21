@@ -146,6 +146,13 @@ def run_checks(df: pd.DataFrame, typed: pd.DataFrame, mapping: dict[str, str]) -
     if returned_col:
         raw = df[returned_col]
         is_return = return_mask(df, mapping)
+        falsey = {"否", "n", "no", "false", "0", "无", "未退货"}
+        normalized = raw.dropna().astype("string").str.strip().str.lower()
+        unmatched = sorted(set(normalized) - TRUTHY - falsey)
+        non_null = int(raw.notna().sum())
+        warning = None
+        if non_null and int(is_return.sum()) == 0:
+            warning = "退货列非空但没有命中任何“是”类值；退货口径会退化为无退货，请核对取值。"
         out["returns"] = {
             "column": returned_col,
             "value_counts": {str(k): _i(v) for k, v in raw.value_counts(dropna=False).items()},
@@ -153,6 +160,8 @@ def run_checks(df: pd.DataFrame, typed: pd.DataFrame, mapping: dict[str, str]) -
             "return_amount_total": _sum(typed.loc[is_return, amount_col]) if amount_col else None,
             "return_cost_total": _sum(typed.loc[is_return, cost_col]) if cost_col else None,
             "truthy_values": sorted(TRUTHY),
+            "unmatched_values": unmatched,
+            "warning": warning,
         }
 
     # ---------- 成本语义 ----------

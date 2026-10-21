@@ -72,13 +72,21 @@ def _monthly_table(typed: pd.DataFrame, mapping: dict[str, str]) -> list[dict]:
     if not len(valid):
         return []
     valid["__month"] = valid[date_col].dt.to_period("M")
+    first_period = valid[date_col].min().to_period("M")
+    last_period = valid[date_col].max().to_period("M")
     rows = []
     for period, frame in valid.groupby("__month"):
         first = frame[date_col].min()
         last = frame[date_col].max()
+        month_start = period.start_time.normalize()
         month_end = period.end_time.normalize()
         coverage = int((last.normalize() - first.normalize()).days) + 1
-        complete = bool(first.day <= 2 and (month_end - last.normalize()).days <= 2)
+        # 只有数据集首月/末月可能因边界截断而不完整；中间月份的订单间隔不代表月份缺失
+        complete = True
+        if period == first_period and (first.normalize() - month_start).days > 2:
+            complete = False
+        if period == last_period and (month_end - last.normalize()).days > 2:
+            complete = False
         rows.append({
             "month": str(period),
             amount_col: _round(frame[amount_col].sum()),

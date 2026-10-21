@@ -119,6 +119,30 @@ class PipelineTest(unittest.TestCase):
         monthly = {row["month"]: row for row in result["summaries"]["monthly"]["rows"]}
         self.assertFalse(monthly["2026-08"]["complete_month"])
         self.assertLess(monthly["2026-08"]["coverage_days"], monthly["2026-08"]["days_in_month"])
+        # 中间月份不应因订单间隔被误判为不完整
+        self.assertTrue(monthly["2026-03"]["complete_month"])
+        self.assertTrue(monthly["2026-07"]["complete_month"])
+        self.assertEqual(result["reconciliation"]["default_excluded_amount"], 598.0)
+        self.assertEqual(
+            result["reconciliation"]["default_excluded_matches_order_id_duplicates"], True
+        )
+
+    def test_unrecognized_return_values_warn(self):
+        csv = self.dir / "returns.csv"
+        csv.write_text(
+            "订单编号,订单日期,数量,销售额,是否退货\n"
+            "F1,2026-07-01,1,100,已退款\n"
+            "F2,2026-07-02,1,200,已退款\n",
+            encoding="utf-8",
+        )
+        out = self.dir / "out"
+        proc = run_pipeline(csv, out)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        result = json.loads((out / "results.json").read_text(encoding="utf-8"))
+        returns = result["quality"]["returns"]
+        self.assertEqual(returns["return_rows"], 0)
+        self.assertIn("已退款", returns["unmatched_values"])
+        self.assertTrue(returns["warning"])
 
     def test_missing_required_role_exits_nonzero(self):
         csv = self.dir / "norole.csv"
