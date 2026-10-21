@@ -1,9 +1,19 @@
 {
   "meta": {
     "file": "assistant_query_logs.csv",
-    "rows": 1297,
-    "labeled": 1252,
-    "unlabeled": 45,
+    "rows": 1235,
+    "raw_rows": 1297,
+    "duplicate_rows_removed": 62,
+    "dedup_rule": "同一 query_id 只保留第一条",
+    "before_dedup": {
+      "rows": 1297,
+      "labeled": 1252,
+      "failures": 161,
+      "fail_rate": 0.1286,
+      "stale_share_of_failures": 0.8137
+    },
+    "labeled": 1191,
+    "unlabeled": 44,
     "days": 7,
     "start": "2026-09-01 07:06",
     "end": "2026-09-07 21:56",
@@ -13,195 +23,282 @@
     "alert_cost_min": 12
   },
   "overall": {
-    "failures": 161,
-    "fail_rate": 0.1286,
-    "unlabeled_share": 0.0347
+    "failures": 152,
+    "fail_rate": 0.1276,
+    "unlabeled_share": 0.0356
   },
   "lag": {
     "fresh": {
-      "queries": 925,
-      "failures": 30,
-      "fail_rate": 0.0324
+      "queries": 881,
+      "failures": 29,
+      "fail_rate": 0.0329
     },
     "stale": {
-      "queries": 327,
-      "failures": 131,
-      "fail_rate": 0.4006
+      "queries": 310,
+      "failures": 123,
+      "fail_rate": 0.3968
     },
-    "stale_share_of_queries": 0.2612,
-    "stale_share_of_failures": 0.8137,
+    "stale_share_of_queries": 0.2603,
+    "stale_share_of_failures": 0.8092,
     "gap_minutes_without_queries": [
       19,
       20,
       21
     ],
     "lag_min": 0.0,
-    "lag_max": 70.0
+    "lag_max": 70.0,
+    "exact_minutes_15_25": [
+      {
+        "minute": 15,
+        "queries": 60,
+        "failures": 4,
+        "fail_rate": 0.0667
+      },
+      {
+        "minute": 16,
+        "queries": 36,
+        "failures": 0,
+        "fail_rate": 0.0
+      },
+      {
+        "minute": 17,
+        "queries": 51,
+        "failures": 3,
+        "fail_rate": 0.0588
+      },
+      {
+        "minute": 18,
+        "queries": 58,
+        "failures": 1,
+        "fail_rate": 0.0172
+      },
+      {
+        "minute": 19,
+        "queries": 0,
+        "failures": 0,
+        "fail_rate": null
+      },
+      {
+        "minute": 20,
+        "queries": 0,
+        "failures": 0,
+        "fail_rate": null
+      },
+      {
+        "minute": 21,
+        "queries": 0,
+        "failures": 0,
+        "fail_rate": null
+      },
+      {
+        "minute": 22,
+        "queries": 8,
+        "failures": 3,
+        "fail_rate": 0.375
+      },
+      {
+        "minute": 23,
+        "queries": 5,
+        "failures": 2,
+        "fail_rate": 0.4
+      },
+      {
+        "minute": 24,
+        "queries": 7,
+        "failures": 4,
+        "fail_rate": 0.5714
+      },
+      {
+        "minute": 25,
+        "queries": 9,
+        "failures": 4,
+        "fail_rate": 0.4444
+      }
+    ],
+    "unlabeled_split": {
+      "fresh": 35,
+      "stale": 9
+    }
+  },
+  "correlations": {
+    "lag_min": 0.4447,
+    "match_margin": -0.0289,
+    "inference_ms": 0.1073
   },
   "confounders": {
     "median_inference_fresh": 52.0,
-    "median_inference_stale": 59.0,
+    "median_inference_stale": 58.0,
     "margin_within_fresh": [
       {
         "bin": "<=4",
-        "queries": 159,
-        "fail_rate": 0.0503
+        "queries": 154,
+        "fail_rate": 0.0519
       },
       {
         "bin": "5-8",
-        "queries": 134,
-        "fail_rate": 0.0373
+        "queries": 129,
+        "fail_rate": 0.0388
       },
       {
         "bin": "9-12",
-        "queries": 112,
-        "fail_rate": 0.0089
+        "queries": 108,
+        "fail_rate": 0.0093
       },
       {
         "bin": "13-16",
-        "queries": 99,
-        "fail_rate": 0.0404
+        "queries": 93,
+        "fail_rate": 0.043
       },
       {
         "bin": ">16",
-        "queries": 421,
-        "fail_rate": 0.0285
+        "queries": 397,
+        "fail_rate": 0.0277
       }
     ],
     "inference_within_fresh": [
       {
         "bin": "<=42",
-        "queries": 269,
-        "fail_rate": 0.0335
+        "queries": 259,
+        "fail_rate": 0.0347
       },
       {
         "bin": "43-63",
-        "queries": 479,
-        "fail_rate": 0.0376
+        "queries": 453,
+        "fail_rate": 0.0375
       },
       {
         "bin": ">63",
-        "queries": 177,
-        "fail_rate": 0.0169
+        "queries": 169,
+        "fail_rate": 0.0178
       }
     ],
     "team": [
       {
         "team": "华东机床组",
-        "queries": 231,
-        "stale_share": 0.2251,
-        "fail_rate_fresh": 0.0223,
+        "queries": 222,
+        "stale_share": 0.2162,
+        "median_lag_min": 11.0,
+        "median_lag_stale_min": 45.0,
+        "fail_rate_fresh": 0.023,
         "fail_rate_stale": 0.5,
-        "n_fresh": 179,
-        "n_stale": 52
+        "n_fresh": 174,
+        "n_stale": 48
       },
       {
         "team": "华中产线组",
-        "queries": 266,
-        "stale_share": 0.2857,
-        "fail_rate_fresh": 0.0789,
-        "fail_rate_stale": 0.0921,
-        "n_fresh": 190,
-        "n_stale": 76
+        "queries": 252,
+        "stale_share": 0.2937,
+        "median_lag_min": 14.0,
+        "median_lag_stale_min": 44.0,
+        "fail_rate_fresh": 0.0787,
+        "fail_rate_stale": 0.0946,
+        "n_fresh": 178,
+        "n_stale": 74
       },
       {
         "team": "华北重工组",
-        "queries": 247,
-        "stale_share": 0.251,
-        "fail_rate_fresh": 0.0216,
-        "fail_rate_stale": 0.5161,
-        "n_fresh": 185,
-        "n_stale": 62
+        "queries": 233,
+        "stale_share": 0.2532,
+        "median_lag_min": 13.0,
+        "median_lag_stale_min": 50.0,
+        "fail_rate_fresh": 0.023,
+        "fail_rate_stale": 0.5085,
+        "n_fresh": 174,
+        "n_stale": 59
       },
       {
         "team": "华南电子组",
-        "queries": 265,
-        "stale_share": 0.2981,
-        "fail_rate_fresh": 0.0108,
-        "fail_rate_stale": 0.519,
-        "n_fresh": 186,
-        "n_stale": 79
+        "queries": 253,
+        "stale_share": 0.2964,
+        "median_lag_min": 14.0,
+        "median_lag_stale_min": 47.0,
+        "fail_rate_fresh": 0.0112,
+        "fail_rate_stale": 0.5067,
+        "n_fresh": 178,
+        "n_stale": 75
       },
       {
         "team": "西南汽车组",
-        "queries": 243,
-        "stale_share": 0.2387,
-        "fail_rate_fresh": 0.027,
-        "fail_rate_stale": 0.431,
-        "n_fresh": 185,
-        "n_stale": 58
+        "queries": 231,
+        "stale_share": 0.2338,
+        "median_lag_min": 11.0,
+        "median_lag_stale_min": 46.0,
+        "fail_rate_fresh": 0.0282,
+        "fail_rate_stale": 0.4444,
+        "n_fresh": 177,
+        "n_stale": 54
       }
     ],
     "category": [
       {
         "category": "固件升级回滚",
-        "queries": 124,
-        "stale_share": 0.2742,
-        "fail_rate_fresh": 0.0222,
-        "fail_rate_stale": 0.3235
+        "queries": 119,
+        "stale_share": 0.2689,
+        "fail_rate_fresh": 0.023,
+        "fail_rate_stale": 0.3438
       },
       {
         "category": "备份容灾策略",
-        "queries": 129,
-        "stale_share": 0.1938,
-        "fail_rate_fresh": 0.0096,
+        "queries": 123,
+        "stale_share": 0.2033,
+        "fail_rate_fresh": 0.0102,
         "fail_rate_stale": 0.32
       },
       {
         "category": "工控参数映射",
-        "queries": 113,
-        "stale_share": 0.2035,
-        "fail_rate_fresh": 0.0222,
+        "queries": 110,
+        "stale_share": 0.2091,
+        "fail_rate_fresh": 0.023,
         "fail_rate_stale": 0.3478
       },
       {
         "category": "总线地址分配",
-        "queries": 110,
-        "stale_share": 0.2727,
+        "queries": 105,
+        "stale_share": 0.2762,
         "fail_rate_fresh": 0.0,
-        "fail_rate_stale": 0.4333
+        "fail_rate_stale": 0.4483
       },
       {
         "category": "报警联动规则",
-        "queries": 113,
-        "stale_share": 0.3009,
-        "fail_rate_fresh": 0.0886,
-        "fail_rate_stale": 0.5294
+        "queries": 107,
+        "stale_share": 0.2991,
+        "fail_rate_fresh": 0.0933,
+        "fail_rate_stale": 0.5312
       },
       {
         "category": "数据采集上报",
-        "queries": 126,
-        "stale_share": 0.254,
-        "fail_rate_fresh": 0.0319,
-        "fail_rate_stale": 0.4375
+        "queries": 121,
+        "stale_share": 0.2397,
+        "fail_rate_fresh": 0.0326,
+        "fail_rate_stale": 0.4138
       },
       {
         "category": "权限安全策略",
-        "queries": 129,
-        "stale_share": 0.2791,
-        "fail_rate_fresh": 0.0215,
-        "fail_rate_stale": 0.3889
+        "queries": 122,
+        "stale_share": 0.2869,
+        "fail_rate_fresh": 0.023,
+        "fail_rate_stale": 0.4
       },
       {
         "category": "环境依赖校验",
-        "queries": 127,
-        "stale_share": 0.3228,
-        "fail_rate_fresh": 0.0581,
-        "fail_rate_stale": 0.2927
+        "queries": 121,
+        "stale_share": 0.314,
+        "fail_rate_fresh": 0.0482,
+        "fail_rate_stale": 0.3158
       },
       {
         "category": "网络拓扑规划",
-        "queries": 150,
-        "stale_share": 0.24,
-        "fail_rate_fresh": 0.0439,
-        "fail_rate_stale": 0.4444
+        "queries": 140,
+        "stale_share": 0.2429,
+        "fail_rate_fresh": 0.0472,
+        "fail_rate_stale": 0.4118
       },
       {
         "category": "通信协议配置",
-        "queries": 131,
-        "stale_share": 0.2748,
-        "fail_rate_fresh": 0.0316,
-        "fail_rate_stale": 0.4722
+        "queries": 123,
+        "stale_share": 0.2683,
+        "fail_rate_fresh": 0.0333,
+        "fail_rate_stale": 0.4242
       }
     ]
   },
@@ -209,159 +306,159 @@
     "thresholds": [
       {
         "threshold_min": 10,
-        "alerts": 768,
-        "alert_share": 0.6134,
-        "failures_caught": 146,
-        "failures_total": 161,
-        "recall": 0.9068,
+        "alerts": 754,
+        "alert_share": 0.6105,
+        "failures_caught": 137,
+        "failures_total": 152,
+        "recall": 0.9013,
         "remaining_failures": 15,
-        "cost_minutes": 10566,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 3924
+        "cost_minutes": 10398,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 3282
       },
       {
         "threshold_min": 12,
-        "alerts": 679,
-        "alert_share": 0.5423,
-        "failures_caught": 144,
-        "failures_total": 161,
-        "recall": 0.8944,
-        "remaining_failures": 17,
-        "cost_minutes": 9678,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 4812
+        "alerts": 670,
+        "alert_share": 0.5425,
+        "failures_caught": 136,
+        "failures_total": 152,
+        "recall": 0.8947,
+        "remaining_failures": 16,
+        "cost_minutes": 9480,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 4200
       },
       {
         "threshold_min": 15,
-        "alerts": 541,
-        "alert_share": 0.4321,
-        "failures_caught": 139,
-        "failures_total": 161,
-        "recall": 0.8634,
-        "remaining_failures": 22,
-        "cost_minutes": 8472,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 6018
+        "alerts": 532,
+        "alert_share": 0.4308,
+        "failures_caught": 131,
+        "failures_total": 152,
+        "recall": 0.8618,
+        "remaining_failures": 21,
+        "cost_minutes": 8274,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 5406
       },
       {
         "threshold_min": 18,
-        "alerts": 388,
-        "alert_share": 0.3099,
-        "failures_caught": 132,
-        "failures_total": 161,
-        "recall": 0.8199,
-        "remaining_failures": 29,
-        "cost_minutes": 7266,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 7224
+        "alerts": 379,
+        "alert_share": 0.3069,
+        "failures_caught": 124,
+        "failures_total": 152,
+        "recall": 0.8158,
+        "remaining_failures": 28,
+        "cost_minutes": 7068,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 6612
       },
       {
         "threshold_min": 20,
-        "alerts": 327,
-        "alert_share": 0.2612,
-        "failures_caught": 131,
-        "failures_total": 161,
-        "recall": 0.8137,
-        "remaining_failures": 30,
-        "cost_minutes": 6624,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 7866
+        "alerts": 319,
+        "alert_share": 0.2583,
+        "failures_caught": 123,
+        "failures_total": 152,
+        "recall": 0.8092,
+        "remaining_failures": 29,
+        "cost_minutes": 6438,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 7242
       },
       {
         "threshold_min": 22,
-        "alerts": 327,
-        "alert_share": 0.2612,
-        "failures_caught": 131,
-        "failures_total": 161,
-        "recall": 0.8137,
-        "remaining_failures": 30,
-        "cost_minutes": 6624,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 7866
+        "alerts": 319,
+        "alert_share": 0.2583,
+        "failures_caught": 123,
+        "failures_total": 152,
+        "recall": 0.8092,
+        "remaining_failures": 29,
+        "cost_minutes": 6438,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 7242
       },
       {
         "threshold_min": 25,
-        "alerts": 306,
-        "alert_share": 0.2444,
-        "failures_caught": 121,
-        "failures_total": 161,
-        "recall": 0.7516,
-        "remaining_failures": 40,
-        "cost_minutes": 7272,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 7218
+        "alerts": 298,
+        "alert_share": 0.2413,
+        "failures_caught": 114,
+        "failures_total": 152,
+        "recall": 0.75,
+        "remaining_failures": 38,
+        "cost_minutes": 6996,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 6684
       },
       {
         "threshold_min": 30,
-        "alerts": 274,
-        "alert_share": 0.2188,
-        "failures_caught": 107,
-        "failures_total": 161,
-        "recall": 0.6646,
-        "remaining_failures": 54,
-        "cost_minutes": 8148,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 6342
+        "alerts": 268,
+        "alert_share": 0.217,
+        "failures_caught": 101,
+        "failures_total": 152,
+        "recall": 0.6645,
+        "remaining_failures": 51,
+        "cost_minutes": 7806,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 5874
       },
       {
         "threshold_min": 35,
-        "alerts": 238,
-        "alert_share": 0.1901,
-        "failures_caught": 99,
-        "failures_total": 161,
-        "recall": 0.6149,
-        "remaining_failures": 62,
-        "cost_minutes": 8436,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 6054
+        "alerts": 233,
+        "alert_share": 0.1887,
+        "failures_caught": 93,
+        "failures_total": 152,
+        "recall": 0.6118,
+        "remaining_failures": 59,
+        "cost_minutes": 8106,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 5574
       },
       {
         "threshold_min": 40,
-        "alerts": 199,
-        "alert_share": 0.1589,
-        "failures_caught": 84,
-        "failures_total": 161,
-        "recall": 0.5217,
-        "remaining_failures": 77,
-        "cost_minutes": 9318,
-        "baseline_cost_minutes": 14490,
-        "saved_minutes": 5172
+        "alerts": 194,
+        "alert_share": 0.1571,
+        "failures_caught": 78,
+        "failures_total": 152,
+        "recall": 0.5132,
+        "remaining_failures": 74,
+        "cost_minutes": 8988,
+        "baseline_cost_minutes": 13680,
+        "saved_minutes": 4692
       }
     ],
     "best": {
       "threshold_min": 20,
-      "alerts": 327,
-      "alert_share": 0.2612,
-      "failures_caught": 131,
-      "failures_total": 161,
-      "recall": 0.8137,
-      "remaining_failures": 30,
-      "cost_minutes": 6624,
-      "baseline_cost_minutes": 14490,
-      "saved_minutes": 7866
+      "alerts": 319,
+      "alert_share": 0.2583,
+      "failures_caught": 123,
+      "failures_total": 152,
+      "recall": 0.8092,
+      "remaining_failures": 29,
+      "cost_minutes": 6438,
+      "baseline_cost_minutes": 13680,
+      "saved_minutes": 7242
     },
     "recommended": {
       "threshold_min": 20,
-      "alerts_labeled": 327,
-      "alerts_all_queries": 337,
-      "failures_caught": 131,
-      "failures_total": 161,
-      "per_team_per_day_alerts": 9.6,
+      "alerts_labeled": 310,
+      "alerts_all_queries": 319,
+      "failures_caught": 123,
+      "failures_total": 152,
+      "per_team_per_day_alerts": 9.1,
       "sensitivity": {
         "assume_prevented_100pct": {
-          "cost_minutes": 6624.0,
-          "saved_minutes": 7866.0,
-          "saved_pct": 54.3
+          "cost_minutes": 6438.0,
+          "saved_minutes": 7242.0,
+          "saved_pct": 52.9
         },
         "assume_prevented_80pct": {
-          "cost_minutes": 8982.0,
-          "saved_minutes": 5508.0,
-          "saved_pct": 38.0
+          "cost_minutes": 8652.0,
+          "saved_minutes": 5028.0,
+          "saved_pct": 36.8
         },
         "assume_prevented_60pct": {
-          "cost_minutes": 11340.0,
-          "saved_minutes": 3150.0,
-          "saved_pct": 21.7
+          "cost_minutes": 10866.0,
+          "saved_minutes": 2814.0,
+          "saved_pct": 20.6
         }
       }
     }

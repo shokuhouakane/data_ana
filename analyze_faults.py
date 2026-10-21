@@ -43,6 +43,25 @@ def prepare(path: Path) -> tuple[pd.DataFrame, dict]:
     df["lag_min"] = (df["query_time"] - df["kb_synced_at"]).dt.total_seconds() / 60
     df["stale"] = df["lag_min"] >= STALE_MIN
     df["fail"] = df["is_success"].map({1.0: False, 0.0: True})
+
+    # query_id 是任务书定义的单据唯一流水号；重复行必须先声明再剔除
+    raw_rows = int(len(df))
+    duplicate_rows = int(df.duplicated(subset=["query_id"], keep="first").sum())
+    before_labeled = df[df["is_success"].notna()]
+    before_fail = int((before_labeled["is_success"] == 0).sum())
+    before_stale_fail = int(((before_labeled["is_success"] == 0) & before_labeled["stale"]).sum())
+    meta["before_dedup"] = {
+        "rows": raw_rows,
+        "labeled": int(len(before_labeled)),
+        "failures": before_fail,
+        "fail_rate": round(before_fail / len(before_labeled), 4) if len(before_labeled) else None,
+        "stale_share_of_failures": round(before_stale_fail / before_fail, 4) if before_fail else None,
+    }
+    df = df.drop_duplicates(subset=["query_id"], keep="first").copy()
+    meta["raw_rows"] = raw_rows
+    meta["duplicate_rows_removed"] = duplicate_rows
+    meta["unique_query_ids"] = int(df["query_id"].nunique())
+    meta["dedup_rule"] = "同一 query_id 只保留第一条"
     return df, meta
 
 
@@ -55,20 +74,22 @@ def rates(df: pd.DataFrame, mask: pd.Series) -> dict:
     }
 
 
-def threshold_table(df: pd.DataFrame) -> list[dict]:
+def threshold_table(all_df: pd.DataFrame) -> list[dict]:
+    """预警发生在查询时，未回传结果的查询同样会触发；故障只统计有回传的。"""
+    df = all_df[all_df["is_success"].notna()]
     total_fails = int(df["fail"].sum())
     baseline = total_fails * FAIL_COST_MIN
     rows = []
     for t in THRESHOLDS:
-        alert = df["lag_min"] >= t
-        alerts = int(alert.sum())
-        caught = int((alert & df["fail"]).sum())
+        alert_all = all_df["lag_min"] >= t
+        alerts = int(alert_all.sum())
+        caught = int((alert_all & all_df["fail"].eq(True)).sum())
         remaining = total_fails - caught
         cost = alerts * ALERT_COST_MIN + remaining * FAIL_COST_MIN
         rows.append({
             "threshold_min": t,
             "alerts": alerts,
-            "alert_share": round(alerts / len(df), 4),
+            "alert_share": round(alerts / len(all_df), 4),
             "failures_caught": caught,
             "failures_total": total_fails,
             "recall": round(caught / total_fails, 4),
@@ -83,14 +104,14 @@ def threshold_table(df: pd.DataFrame) -> list[dict]:
 def strategy_sensitivity(all_df: pd.DataFrame, threshold: int) -> dict:
     df = all_df[all_df["is_success"].notna()]
     total_fails = int(df["fail"].sum())
-    alert = df["lag_min"] >= threshold
-    alerts = int(alert.sum())
-    caught = int((alert & df["fail"]).sum())
-    alerts_all = int((all_df["lag_min"] >= threshold).sum())
+    alert_all = all_df["lag_min"] >= threshold
+    alerts_all = int(alert_all.sum())
+    alerts_labeled = int((df["lag_min"] >= threshold).sum())
+    caught = int((alert_all & all_df["fail"].eq(True)).sum())
     out = {}
     for prevent in (1.0, 0.8, 0.6):
         remaining = total_fails - caught * prevent
-        cost = alerts * ALERT_COST_MIN + remaining * FAIL_COST_MIN
+        cost = alerts_all * ALERT_COST_MIN + remaining * FAIL_COST_MIN
         out[f"assume_prevented_{int(prevent * 100)}pct"] = {
             "cost_minutes": round(cost, 1),
             "saved_minutes": round(total_fails * FAIL_COST_MIN - cost, 1),
@@ -98,7 +119,7 @@ def strategy_sensitivity(all_df: pd.DataFrame, threshold: int) -> dict:
         }
     return {
         "threshold_min": threshold,
-        "alerts_labeled": alerts,
+        "alerts_labeled": alerts_labeled,
         "alerts_all_queries": alerts_all,
         "failures_caught": caught,
         "failures_total": total_fails,
@@ -128,6 +149,11 @@ def build_results(df: pd.DataFrame, meta: dict) -> dict:
             "team": str(name),
             "queries": int(len(part)),
             "stale_share": round(float(part["stale"].mean()), 4),
+            "median_lag_min": round(float(part["lag_min"].median()), 1),
+            "median_lag_stale_min": (
+                round(float(part.loc[part["stale"], "lag_min"].median()), 1)
+                if part["stale"].any() else None
+            ),
             **{f"fail_rate_{'stale' if s else 'fresh'}": round(float(part.loc[part["stale"] == s, "fail"].mean()), 4)
                for s in (False, True) if len(part.loc[part["stale"] == s])},
             **{f"n_{'stale' if s else 'fresh'}": int((part["stale"] == s).sum()) for s in (False, True)},
@@ -154,17 +180,41 @@ def build_results(df: pd.DataFrame, meta: dict) -> dict:
         for k, v in infer_bins.value_counts().sort_index().items()
     ]
 
-    thresholds = threshold_table(labeled)
+    thresholds = threshold_table(df)
     best = min(thresholds, key=lambda r: r["cost_minutes"])
 
     lag_values = sorted(labeled["lag_min"].round(0).astype(int).unique())
     gap = [x for x in range(int(labeled["lag_min"].min()), int(labeled["lag_min"].max()) + 1) if x not in lag_values]
+
+    minute = labeled.assign(m=labeled["lag_min"].round().astype(int))
+    exact_minutes = []
+    for m in range(15, 26):
+        part = minute[minute["m"] == m]
+        exact_minutes.append({
+            "minute": m,
+            "queries": int(len(part)),
+            "failures": int(part["fail"].sum()),
+            "fail_rate": round(float(part["fail"].mean()), 4) if len(part) else None,
+        })
+    correlations = {
+        "lag_min": round(float(labeled["lag_min"].corr(labeled["fail"])), 4),
+        "match_margin": round(float(labeled["match_margin"].corr(labeled["fail"])), 4),
+        "inference_ms": round(float(labeled["inference_ms"].corr(labeled["fail"])), 4),
+    }
+    unlabeled_split = {
+        "fresh": int((unlabeled["lag_min"] < STALE_MIN).sum()),
+        "stale": int((unlabeled["lag_min"] >= STALE_MIN).sum()),
+    }
 
     local = df["query_time"].dt.tz_convert("Asia/Shanghai")
     return {
         "meta": {
             "file": Path(meta["file"]).name,
             "rows": int(len(df)),
+            "raw_rows": meta.get("raw_rows"),
+            "duplicate_rows_removed": meta.get("duplicate_rows_removed"),
+            "dedup_rule": meta.get("dedup_rule"),
+            "before_dedup": meta.get("before_dedup"),
             "labeled": int(len(labeled)),
             "unlabeled": int(len(unlabeled)),
             "days": int(local.dt.date.nunique()),
@@ -188,7 +238,10 @@ def build_results(df: pd.DataFrame, meta: dict) -> dict:
             "gap_minutes_without_queries": gap,
             "lag_min": round(float(labeled["lag_min"].min()), 2),
             "lag_max": round(float(labeled["lag_min"].max()), 2),
+            "exact_minutes_15_25": exact_minutes,
+            "unlabeled_split": unlabeled_split,
         },
+        "correlations": correlations,
         "confounders": {
             "median_inference_fresh": float(fresh["inference_ms"].median()),
             "median_inference_stale": float(stale["inference_ms"].median()),
