@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -18,6 +19,8 @@ RUN = ROOT / "run_all.py"
 
 
 def run_pipeline(csv_path: Path, out_dir: Path, *extra: str) -> subprocess.CompletedProcess:
+    # Windows 子进程默认 cp936；显式指定 UTF-8，测试才能在中文输出下稳定断言
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
     return subprocess.run(
         [sys.executable, str(RUN), "--data", str(csv_path), "--out", str(out_dir), *extra],
         cwd=ROOT,
@@ -25,6 +28,7 @@ def run_pipeline(csv_path: Path, out_dir: Path, *extra: str) -> subprocess.Compl
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=env,
     )
 
 
@@ -98,6 +102,23 @@ class PipelineTest(unittest.TestCase):
         result = json.loads((out / "results.json").read_text(encoding="utf-8"))
         self.assertEqual(result["schema"]["coercion_failures"]["price"]["parse_failed"], 1)
         self.assertEqual(result["quality"]["amount_consistency"]["non_comparable_rows"], 1)
+
+    def test_summaries_use_default_policy(self):
+        csv = ROOT / "tests" / "fixtures" / "synthetic_orders.csv"
+        out = self.dir / "out"
+        proc = run_pipeline(csv, out)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        result = json.loads((out / "results.json").read_text(encoding="utf-8"))
+        default_amount = result["policy"]["default_totals"]["amount"]
+        self.assertEqual(default_amount, 16334.0)
+        for role, block in result["summaries"].items():
+            if "group_sum_all_amount" in block:
+                self.assertAlmostEqual(block["group_sum_all_amount"], default_amount, places=2, msg=role)
+                self.assertTrue(block["reconciles"], role)
+        self.assertTrue(result["reconciliation"]["all_group_sums_match_default_totals"])
+        monthly = {row["month"]: row for row in result["summaries"]["monthly"]["rows"]}
+        self.assertFalse(monthly["2026-08"]["complete_month"])
+        self.assertLess(monthly["2026-08"]["coverage_days"], monthly["2026-08"]["days_in_month"])
 
     def test_missing_required_role_exits_nonzero(self):
         csv = self.dir / "norole.csv"

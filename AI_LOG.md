@@ -74,4 +74,23 @@ AI 检查结果：
 
 **AI 自己的错误（记录）**：第一版成本语义用数值启发式判断“单位成本”，在合成夹具上把总成本误判成单位成本（比值 1.132 落入阈值）。根因是当数量多数为 1 时，总成本与单位成本在数值上不可区分。改为：数值只做诊断，只有列名含 unit/单位/单价 才标高风险，其余一律标记“需人工确认，未确认前不算毛利”。
 
+## 2026-10-21 第三轮审查（发现新的口径分叉）
+
+**审查员指出的问题**：
+
+1. **阻断**：摘要和图直接吃未去重的 `typed`，而 `default_totals` 是去重后的值——results.json 里 channel 三项和 16932，默认总额 16334，README 同时引用会加总对不上。
+2. **测试并非全过**：`subprocess` 固定 UTF-8 解码，而 Windows 子进程用 cp936 输出中文，`缺少必需语义角色` 断言乱码；产品代码 exit 2 是对的，错在测试。
+3. 退货规则缺“净额”语义；policy 的重复剔除金额与 quality 的订单号重复指标没有对账字段。
+4. `head(20)` 截断与路径细节、未跟踪旧文件会混入交付物。
+
+**修正**：
+
+- `run_all.py` 先用 `apply_policy` 得到默认口径掩码，再用过滤后的数据生成 summaries 和 figures；每个分组块写入 `policy`，并新增 `all_group_sums_match_default_totals` 对账字段。实测 6 个分组块全部等于 16334。
+- 新增退货 `net` 规则（剔除退货正单、保留负冲减），totals 增加 `returned_amount_included`、`returned_cost_included`、`excluded_rows`、`excluded_amount`；full_row+include 的 `excluded_amount` = 598，与 quality 的重复影响对账一致。
+- 月度汇总增加 `complete_month`/`coverage_days`/`days_in_month`，图中不完整月份标 `*` 并置灰；标题写明默认口径与 n。
+- 测试子进程显式 `PYTHONIOENCODING=utf-8`，新增“摘要与默认口径一致”“2026-08 不完整”两项断言；6 项测试在**不带任何环境变量**的普通命令下全过。
+- `.gitignore` 排除 `env_check.py`、根目录 `test_data.csv`，避免 `git add .` 混入。
+
+**AI 自己的错误**：改月度图标签时写了未定义的 `row`，导致 5 项测试连锁失败；测试跑出来才发现，已改为按 `row` 遍历并重跑全过。这也是把“5 项全过”当成事实之前必须先跑一遍的原因。
+
 （以下将在任务开始后继续记录。）

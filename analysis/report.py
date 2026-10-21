@@ -1,7 +1,7 @@
 """结果导出：results.json（机器可读，README 只引用它）+ summary.md + 图。
 
-分组汇总显式记录 total_groups / displayed / truncated，避免 head(20) 造成
-“分组和 ≠ 总额”却无标记；路径统一为 POSIX 相对路径。
+摘要与图必须吃“按默认口径过滤后”的数据，保证总额与分组加总同源。
+分组汇总显式记录 total_groups / displayed / truncated，路径统一为仓库相对 POSIX。
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import pandas as pd
 
 GROUP_ROLES = ("region", "city", "category", "product", "channel", "returned")
 MISSING_LABEL = "（缺失）"
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _clean(value):
@@ -36,7 +37,7 @@ def _clean(value):
 def _round(value):
     if isinstance(value, bool):
         return value
-    if isinstance(value, (int,)) and not isinstance(value, bool):
+    if isinstance(value, int):
         return int(value)
     try:
         out = float(value)
@@ -48,23 +49,53 @@ def _round(value):
 
 
 def _label(value) -> str:
-    if value is None or (isinstance(value, float) and value != value) or pd.isna(value):
-        return MISSING_LABEL
+    try:
+        if value is None or pd.isna(value):
+            return MISSING_LABEL
+    except (TypeError, ValueError):
+        pass
     return str(value)
 
 
 def _rel(path: Path) -> str:
     try:
-        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+        return path.resolve().relative_to(ROOT).as_posix()
     except ValueError:
-        return path.as_posix()
+        return path.name
 
 
-def build_summaries(typed: pd.DataFrame, mapping: dict[str, str]) -> dict:
+def _monthly_table(typed: pd.DataFrame, mapping: dict[str, str]) -> list[dict]:
+    date_col, amount_col = mapping.get("date"), mapping.get("amount")
+    if not (date_col and amount_col):
+        return []
+    valid = typed[typed[date_col].notna()].copy()
+    if not len(valid):
+        return []
+    valid["__month"] = valid[date_col].dt.to_period("M")
+    rows = []
+    for period, frame in valid.groupby("__month"):
+        first = frame[date_col].min()
+        last = frame[date_col].max()
+        month_end = period.end_time.normalize()
+        coverage = int((last.normalize() - first.normalize()).days) + 1
+        complete = bool(first.day <= 2 and (month_end - last.normalize()).days <= 2)
+        rows.append({
+            "month": str(period),
+            amount_col: _round(frame[amount_col].sum()),
+            "rows": int(len(frame)),
+            "first_day": first.strftime("%Y-%m-%d"),
+            "last_day": last.strftime("%Y-%m-%d"),
+            "coverage_days": coverage,
+            "days_in_month": int(period.days_in_month),
+            "complete_month": complete,
+        })
+    return rows
+
+
+def build_summaries(typed: pd.DataFrame, mapping: dict[str, str], policy_label: dict | None = None) -> dict:
     amount_col = mapping.get("amount")
     qty_col = mapping.get("qty")
     cost_col = mapping.get("cost")
-    date_col = mapping.get("date")
     overall_amount = float(typed[amount_col].sum()) if amount_col else None
     summaries: dict = {}
 
@@ -84,6 +115,7 @@ def build_summaries(typed: pd.DataFrame, mapping: dict[str, str]) -> dict:
         displayed = table.head(20)
         summaries[role] = {
             "column": col,
+            "policy": policy_label,
             "total_groups": int(table.shape[0]),
             "displayed": int(displayed.shape[0]),
             "truncated": bool(table.shape[0] > displayed.shape[0]),
@@ -99,24 +131,13 @@ def build_summaries(typed: pd.DataFrame, mapping: dict[str, str]) -> dict:
             ],
         }
 
-    if date_col and amount_col:
-        valid = typed[typed[date_col].notna()].copy()
-        if len(valid):
-            valid["__month"] = valid[date_col].dt.to_period("M").astype(str)
-            agg = {amount_col: "sum"}
-            if cost_col:
-                agg[cost_col] = "sum"
-            monthly = valid.groupby("__month").agg(agg)
-            monthly["rows"] = valid.groupby("__month").size()
-            monthly["first_day"] = valid.groupby("__month")[date_col].min().dt.strftime("%Y-%m-%d")
-            monthly["last_day"] = valid.groupby("__month")[date_col].max().dt.strftime("%Y-%m-%d")
-            summaries["monthly"] = {
-                "column": date_col,
-                "rows": [
-                    {"month": str(idx), **{k: _round(v) for k, v in row.items()}}
-                    for idx, row in monthly.iterrows()
-                ],
-            }
+    monthly = _monthly_table(typed, mapping)
+    if monthly:
+        summaries["monthly"] = {
+            "column": mapping.get("date"),
+            "policy": policy_label,
+            "rows": monthly,
+        }
     return summaries
 
 
@@ -128,6 +149,7 @@ def write_json(results: dict, out_dir: Path) -> Path:
 
 
 def write_summary_md(results: dict, out_dir: Path) -> Path:
+    policy = results["policy"]["default"]
     lines = [
         "# 数据体检摘要（由脚本生成，请勿手改）",
         "",
@@ -135,6 +157,7 @@ def write_summary_md(results: dict, out_dir: Path) -> Path:
         f"- sha256：`{results['meta']['sha256']}`",
         f"- 行数：{results['quality']['row_count']}，列数：{results['quality']['column_count']}",
         f"- 编码：{results['meta']['encoding']}，分隔符：`{results['meta']['delimiter']}`",
+        f"- 默认口径：去重={policy['dedup']}，退货={policy['returns']}，金额={policy['amount_authority']}",
         f"- 语义映射：{json.dumps(results['schema']['mapped'], ensure_ascii=False)}",
         "",
         "## 默认口径 totals",
@@ -143,13 +166,13 @@ def write_summary_md(results: dict, out_dir: Path) -> Path:
         json.dumps(results["policy"]["default_totals"], ensure_ascii=False, indent=2),
         "```",
         "",
-        "## 体检",
+        "## 体检（基于原始数据，未按口径过滤）",
         "",
         "```json",
         json.dumps(results["quality"], ensure_ascii=False, indent=2),
         "```",
         "",
-        "## 分组概览",
+        "## 分组概览（默认口径）",
         "",
     ]
     for role, block in results.get("summaries", {}).items():
@@ -170,7 +193,12 @@ def write_summary_md(results: dict, out_dir: Path) -> Path:
     return path
 
 
-def make_figures(typed: pd.DataFrame, mapping: dict[str, str], out_dir: Path) -> list[str]:
+def make_figures(
+    typed: pd.DataFrame,
+    mapping: dict[str, str],
+    out_dir: Path,
+    policy_label: dict | None = None,
+) -> list[str]:
     """只画两张通用图；正式结论图在业务分析层另写。"""
     created: list[str] = []
     try:
@@ -188,21 +216,30 @@ def make_figures(typed: pd.DataFrame, mapping: dict[str, str], out_dir: Path) ->
     date_col = mapping.get("date")
     fig_dir = out_dir / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
+    policy_text = (
+        f"口径：去重={policy_label['dedup']}，退货={policy_label['returns']}，"
+        f"金额={policy_label['amount_authority']}"
+        if policy_label else ""
+    )
 
-    if amount_col and date_col:
-        valid = typed[typed[date_col].notna()]
-        if len(valid):
-            monthly = valid.groupby(valid[date_col].dt.to_period("M").astype(str))[amount_col].sum()
-            fig, ax = plt.subplots(figsize=(9, 4.2))
-            ax.bar(monthly.index, monthly.values, color="#4C78A8")
-            ax.set_title(f"各月{amount_col}合计（n={len(valid)} 行）")
-            ax.set_ylabel(amount_col)
-            ax.tick_params(axis="x", rotation=45)
-            fig.tight_layout()
-            path = fig_dir / "monthly_amount.png"
-            fig.savefig(path, dpi=150)
-            plt.close(fig)
-            created.append(_rel(path))
+    monthly = _monthly_table(typed, mapping)
+    if monthly:
+        values = [row[amount_col] for row in monthly]
+        colors = ["#9AA5B1" if not row["complete_month"] else "#4C78A8" for row in monthly]
+        labels = [
+            row["month"] + ("*" if not row["complete_month"] else "") for row in monthly
+        ]
+        fig, ax = plt.subplots(figsize=(9, 4.2))
+        ax.bar(labels, values, color=colors)
+        ax.set_title(f"各月{amount_col}合计（n={len(typed)} 行；* 表示月份数据不完整）")
+        ax.set_ylabel(amount_col)
+        ax.tick_params(axis="x", rotation=45)
+        fig.text(0.01, 0.01, policy_text, fontsize=8, color="#555555")
+        fig.tight_layout(rect=(0, 0.03, 1, 1))
+        path = fig_dir / "monthly_amount.png"
+        fig.savefig(path, dpi=150)
+        plt.close(fig)
+        created.append(_rel(path))
 
     cat_col = mapping.get("category") or mapping.get("region")
     if amount_col and cat_col:
@@ -216,7 +253,8 @@ def make_figures(typed: pd.DataFrame, mapping: dict[str, str], out_dir: Path) ->
         ax.barh([_label(x) for x in top.index][::-1], top.values[::-1], color="#59A14F")
         ax.set_title(f"按{cat_col}的{amount_col}前 10（n={len(typed)} 行）")
         ax.set_xlabel(amount_col)
-        fig.tight_layout()
+        fig.text(0.01, 0.01, policy_text, fontsize=8, color="#555555")
+        fig.tight_layout(rect=(0, 0.03, 1, 1))
         path = fig_dir / "top_categories.png"
         fig.savefig(path, dpi=150)
         plt.close(fig)

@@ -24,7 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 from analysis.io_utils import read_table
-from analysis.policy import build_policy_block
+from analysis.policy import apply_policy, build_policy_block
 from analysis.quality import run_checks
 from analysis.report import build_summaries, make_figures, write_json, write_summary_md
 from analysis.schema import DEFAULT_REQUIRED, coerce, map_columns
@@ -71,7 +71,14 @@ def main(argv: list[str] | None = None) -> int:
     typed, coercion_failures = coerce(df, mapping)
     quality = run_checks(df, typed, mapping)
     policy = build_policy_block(df, typed, mapping)
-    summaries = build_summaries(typed, mapping)
+
+    # 摘要与图按默认口径过滤后的数据生成，保证与 default_totals 同源
+    default = policy["default"]
+    mask = apply_policy(df, typed, mapping, default["dedup"], default["returns"])
+    typed_default = typed[mask]
+    summaries = build_summaries(typed_default, mapping, policy_label=default)
+    policy["summary_policy_applied"] = True
+    policy["summary_rows"] = int(mask.sum())
 
     ambiguous = {
         role: info for role, info in mapping_detail.items()
@@ -84,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
             "sha256": sha256_of(data_path),
             "encoding": read_meta["encoding"],
             "delimiter": read_meta["delimiter"],
+            "engine": read_meta.get("engine"),
             "decoding_fallback": read_meta.get("decoding_fallback", False),
             "rows": read_meta["rows"],
             "columns": read_meta["columns"],
@@ -106,13 +114,21 @@ def main(argv: list[str] | None = None) -> int:
     group_checks = [
         block["reconciles"] for block in summaries.values() if block.get("reconciles") is not None
     ]
+    default_amount = policy["default_totals"]["amount"] if policy["default_totals"] else None
+    matches_default = [
+        abs(block["group_sum_all_amount"] - default_amount) < 0.01
+        for block in summaries.values()
+        if block.get("group_sum_all_amount") is not None and default_amount is not None
+    ]
     results["reconciliation"] = {
         "groups_checked": len(group_checks),
-        "all_reconcile": all(group_checks) if group_checks else None,
+        "all_group_sums_match_overall": all(group_checks) if group_checks else None,
+        "groups_compared_to_default_totals": len(matches_default),
+        "all_group_sums_match_default_totals": all(matches_default) if matches_default else None,
     }
 
     json_path = write_json(results, out_dir)
-    figures = make_figures(typed, mapping, out_dir)
+    figures = make_figures(typed_default, mapping, out_dir, policy_label=default)
     results["figures"] = figures
     write_json(results, out_dir)  # 补上 figures 字段
     md_path = write_summary_md(results, out_dir)

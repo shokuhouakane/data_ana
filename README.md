@@ -35,9 +35,10 @@ python run_all.py --data data/<任务数据>.csv --out results
 
 - `meta`：数据文件 sha256、编码、分隔符、行数、运行环境版本；
 - `schema`：列名到语义角色的映射、歧义/风险标记、解析失败计数、未映射列；
-- `policy`：去重 / 退货 / 金额口径的 12 种组合及各自 totals（默认口径另列）；
+- `policy`：去重（3）× 退货（计入/剔除/净额）× 金额（2）共 18 种组合及各自 totals，默认口径另列；每种组合都带 `excluded_amount`、`returned_amount_included`；
 - `quality`：每类异常的**影响金额**与可回查的订单号；
-- `summaries`：分组汇总，带 `truncated`/`reconciles`，避免截断后分组和与总额对不上。
+- `summaries`：按**默认口径过滤后**的数据生成，与 `default_totals` 同源；每块带 `policy`/`truncated`/`reconciles`；
+- `summaries.monthly`：每月带 `complete_month` 与 `coverage_days`，月度图用 `*` 标出不完整月份。
 
 管线回归测试：
 
