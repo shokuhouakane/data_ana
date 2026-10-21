@@ -1,6 +1,6 @@
 # data_ana — 限时数据分析任务
 
-> 状态：等待任务数据发放。本文件将在拿到数据后 30 分钟内替换为最终交付版本。
+> 状态：等待任务数据发放。分析骨架已就绪，拿到数据后按下面的命令直接跑，再填写结论。
 
 ## 我的判断
 
@@ -12,13 +12,49 @@
 
 ## 怎么证明有用
 
-（待填写：每个结论对应的数字、图表与复现命令。所有数字必须能由 `python run_all.py --data <csv>` 生成。）
+（待填写：每个结论对应的数字、图表与复现命令。）
 
 ## 复现方式
 
-（待填写：环境、命令、输出位置。）
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate  |  macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+
+# 正式数据
+python run_all.py --data data/<任务数据>.csv --out results
+```
+
+输出：
+
+- `results/results.json`：机器可读结果。README 中的数字只引用这里，不手抄终端输出。
+- `results/summary.md`：数据体检摘要（重复、缺失、金额不一致、退货、成本语义、日期）。
+- `results/figures/`：概览图；正式结论图会在分析层另写。
+
+`results.json` 里包含：
+
+- `meta`：数据文件 sha256、编码、分隔符、行数、运行环境版本；
+- `schema`：列名到语义角色的映射、歧义/风险标记、解析失败计数、未映射列；
+- `policy`：去重 / 退货 / 金额口径的 12 种组合及各自 totals（默认口径另列）；
+- `quality`：每类异常的**影响金额**与可回查的订单号；
+- `summaries`：分组汇总，带 `truncated`/`reconciles`，避免截断后分组和与总额对不上。
+
+管线回归测试：
+
+```bash
+python -m unittest discover -s tests -v
+```
 
 ## 数据说明
 
-- `tests/fixtures/test_data.csv`：**合成测试数据**，仅用于验证读取/绘图/导出链路，不参与任何结论，不作为结论依据。
-- 正式任务数据将在任务开始后放入 `data/` 目录，原样提交。
+- `tests/fixtures/synthetic_orders.csv`：**合成测试数据**，仅用于验证读取/体检/绘图/导出链路，不参与任何结论，不作为结论依据。
+- 正式任务数据放在 `data/`，原样提交，不做手工修改。
+
+## 目录
+
+```
+analysis/          读取、列映射、体检、口径、导出
+run_all.py         一键入口
+tests/             管线回归测试（合成数据）
+tests/fixtures/    合成测试夹具
+```

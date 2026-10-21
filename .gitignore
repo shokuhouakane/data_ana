@@ -5,7 +5,10 @@ venv/
 .idea/
 # 运行产物（可由脚本重新生成）
 outputs/
+results/
 __pycache__/
 *.pyc
+# 环境自检用的证书副本
+certs/
 # 本地配置
 .env
