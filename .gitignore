@@ -1,0 +1,11 @@
+# 虚拟环境
+venv/
+.venv/
+# IDE
+.idea/
+# 运行产物（可由脚本重新生成）
+outputs/
+__pycache__/
+*.pyc
+# 本地配置
+.env
